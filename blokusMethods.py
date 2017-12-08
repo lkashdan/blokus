@@ -296,7 +296,9 @@ class Board(BlokusPiece):
         return None
     
     def playPieceMiddle(self, corner, blokusPiece, movesList, backupMovesList, cornerCounter = 0):
-        '''
+        '''Plays a five square piece on the board. Iterates one corner at a time.
+        A threshold is set for what move is playable. If a move is playable, the cpu will play it. 
+        If no moves reach the threshold for an acceptable move, the cpu will play the best move based on how the moves are sorted.
         '''
         blokusFives = blokusPiece[:-9]
         print('top of function. {}'.format(cornerCounter))
@@ -480,8 +482,12 @@ class Board(BlokusPiece):
                                 
         return None, None
     
-    def playPieceEnd(self, corner, blokusPiece, movesList, backupMovesList, cornerCounter = 0):
-        '''
+    def playPieceEnd(self, corner, blokusPiece, movesList, backupMovesList, badMovesList, cornerCounter = 0):
+        '''Operates similarly to playPieceMiddle, with a couple of tweaks. 
+        It finds moves for all of the remaining pieces and it has different thresholds for what move is playable.
+        movesList stores moves that fit onto the board, have playable corners and also have hugged corners
+        backupMovesList stores moves that fit onto the board, have playable corners, but no hugged corners
+        badMovesList stores moves that fit onto the board but have no playable corners. They are dead end moves saved for the end of the game.
         '''
                 
         print('top of function. {}'.format(cornerCounter))
@@ -579,6 +585,9 @@ class Board(BlokusPiece):
                                             for m in hug2:
                                                 playSpace += m[1]
                                             backupMovesList.append([placements, len(placements), playableCorners, playSpace, squaresTouch, blokusItem[2]])
+                                else:
+                                    badMovesList.append([placements, blokusItem[2], len(placements)])
+        
         #print('movesList', movesList)
         #print('backupMovesList', backupMovesList)
                                             
@@ -614,7 +623,7 @@ class Board(BlokusPiece):
                     
                     
                     print('but no good hugged moves, {}'.format(cornerCounter))
-                    return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, cornerCounter = cornerCounter + 1)
+                    return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, badMovesList = badMovesList, cornerCounter = cornerCounter + 1)
                 #in the event that there are no more corners to test, return the best move based on the scoring method
                 else:
                     #place on board
@@ -664,7 +673,7 @@ class Board(BlokusPiece):
                     
                     
                     print('but no good hugged moves, {}'.format(cornerCounter))
-                    return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, cornerCounter = cornerCounter + 1)
+                    return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, badMovesList = badMovesList, cornerCounter = cornerCounter + 1)
                 #in the event that there are no more corners to test, return the best move based on the scoring method
                 else:
                     #place on board
@@ -673,42 +682,66 @@ class Board(BlokusPiece):
                              
                     return movesList[0][0], movesList[0][6]
             
-        else:
+        elif len(backupMovesList) > 1:
             backupMovesList = sorted(backupMovesList, reverse = True, key = lambda x: (x[1],x[2], x[3], x[4]))
             
             print('no hugged moves, {}'.format(cornerCounter))
             #print(backupMovesList[0:3])
             
-            #play five piece if it's playable
-            if len(backupMovesList) > 0:
+            #play five piece if it's playable                      
+            if backupMovesList[0][1] == 5:
+                #place on board
+                for placement in backupMovesList[0][0]:
+                    self.grid[placement[0]][placement[1]] = 1
+                         
+                return backupMovesList[0][0], backupMovesList[0][5]
             
-                if backupMovesList[0][1] == 5:
-                    #place on board
-                    for placement in backupMovesList[0][0]:
-                        self.grid[placement[0]][placement[1]] = 1
-                             
-                    return backupMovesList[0][0], backupMovesList[0][5]
+            elif len(corner) > cornerCounter + 1:
                 
-                elif len(corner) == cornerCounter + 1:
-                    
-                    #place best move on board
-                    for placement in backupMovesList[0][0]:
-                        self.grid[placement[0]][placement[1]] = 1
+                return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, badMovesList = badMovesList, cornerCounter = cornerCounter + 1)
                              
-                    return backupMovesList[0][0], backupMovesList[0][5]
+            else:
                 
-                else:
-                    return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, cornerCounter = cornerCounter + 1)
+                #place best move on board
+                for placement in backupMovesList[0][0]:
+                    self.grid[placement[0]][placement[1]] = 1
+                         
+                return backupMovesList[0][0], backupMovesList[0][5]
+            
+        #if there were no moves w/ playable corners (only badMovesList has options),
+        #go on to next corner unless there are no more corners. In that case, play a move        
+        else:
+            print('only bad moves', cornerCounter)
+            if len(corner) > cornerCounter + 1:
+            
+                return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, badMovesList = badMovesList, cornerCounter = cornerCounter + 1)
                           
-            
-            elif len(corner) > cornerCounter+1:
+            else:
+                if len(badMovesList) > 1:
+                    
+                    badMovesList = sorted(badMovesList, reverse = True, key = lambda x: (x[2]))
                 
-                return Board.playPieceEnd(self, corner = corner, blokusPiece = blokusPiece, movesList = movesList, backupMovesList = backupMovesList, cornerCounter = cornerCounter + 1)
-                                   
+                    #place first move on board. The moves are sorted by piece size.
+                    for placement in badMovesList[0][0]:
+                        self.grid[placement[0]][placement[1]] = 1
+                             
+                    return badMovesList[0][0], badMovesList[0][1]
+                
+                elif len(badMovesList) == 1:
+                    #place only move on board
+                    for placement in badMovesList[0]:
+                        self.grid[placement[0]][placement[1]] = 1
+                             
+                    return badMovesList[0], badMovesList[1]
+                
+                                  
         return None, None
     
     def playPieceConsolidated(self):
-        '''combines playPiece, playPieceMiddle and playPieceEnd to form Anna Gen 2 play. 
+        '''combines playPiece, playPieceMiddle and playPieceEnd to form Anna Gen 2 play.
+        playPiece is used in the first 4 turns, playPieceMiddle is used for turns 5-9,
+        and playPieceEnd is used for the remainder of the game.
+        
         '''
         
         turn = 22 - len(Board._registry)
@@ -731,7 +764,7 @@ class Board(BlokusPiece):
                 Board.removeReg(piecePlayed)
                 return compMove
         else:
-            compMove, piecePlayed = Board.playPieceEnd(self, corner = Board.cornerChoiceRandom(self), blokusPiece = Board.pieceList(self), movesList = [], backupMovesList = [])
+            compMove, piecePlayed = Board.playPieceEnd(self, corner = Board.cornerChoiceRandom(self), blokusPiece = Board.pieceList(self), movesList = [], backupMovesList = [], badMovesList = [])
             if compMove == None:
                 return 'Game Over'
             else:

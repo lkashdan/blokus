@@ -7,11 +7,11 @@ Created on Thu Oct  5 07:52:03 2017
 
 #imports
 import os
-os.chdir('C:\\Users\\LukeK\\Documents\\Python Scripts\\Blokus\\Blokus Gen2')
+os.chdir('C:\\Users\\LukeK\\Documents\\PythonScripts\\Blokus\\BlokusGen1')
 
-import blokusMethodsTesting
-gameBoard = blokusMethodsTesting.Board()
-gameBoard.playableCorners([[13, 15], [11, 17], [12, 17], [13, 16], [13, 17]])
+import blokusMethods
+gameBoard = blokusMethods.Board()
+
 from tkinter import *
  
 #-------------- SET UP THE WINDOW FRAME --------------------------------
